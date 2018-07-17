@@ -60,7 +60,7 @@ std::string decode(std::string::const_iterator begin, std::string::const_iterato
 
 
 //////////// HTTP CLIENT //////////////////////////
-Client::Client(boost::asio::io_service & ioService, ssl::context & ctx)
+Client::Client(boost::asio::io_context & ioService, ssl::context & ctx)
     : _ioService(ioService)
     , _resolver(_ioService)
     , _stream(_ioService, ctx)

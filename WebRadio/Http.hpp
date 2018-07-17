@@ -40,7 +40,7 @@ namespace http = boost::beast::http;
 
 class Client
 {
-    boost::asio::io_service & _ioService;
+    boost::asio::io_context & _ioService;
     tcp::resolver _resolver;
     ssl::stream<tcp::socket> _stream;
     boost::beast::flat_buffer _buffer;
@@ -58,7 +58,7 @@ class Client
             tcp::resolver::iterator);
 
     public:
-    Client(boost::asio::io_service &, ssl::context&);
+    Client(boost::asio::io_context &, ssl::context&);
     Client(const Client &) = delete;
     Client(Client &&) = default;
     ~Client() = default;

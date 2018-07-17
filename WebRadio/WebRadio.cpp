@@ -215,7 +215,7 @@ int main(int argc, char * argv[])
         return EXIT_FAILURE;
     }
 
-    boost::asio::io_service ioService;
+    boost::asio::io_context ioService(1); // run in a single thread
     boost::asio::ssl::context ctx(boost::asio::ssl::context::sslv23_client);
     ctx.set_default_verify_paths();
 
