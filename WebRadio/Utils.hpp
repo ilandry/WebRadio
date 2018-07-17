@@ -71,7 +71,8 @@ class Logger
     Logger& operator<<(const T& t)
     {
         _ofs << t; 
-        _ofs.flush();
+        // for debug
+        //_ofs.flush();
         return *this;
     }
 };
