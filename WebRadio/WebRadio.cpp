@@ -180,6 +180,7 @@ int main(int argc, char * argv[])
 
     bool isDownload = false;
     bool isPlay = false;
+    bool isRepeat = false;
 
     std::string publicUrlStr;
     try
@@ -190,7 +191,8 @@ int main(int argc, char * argv[])
             ("help", "list command arguments")
             ("url", po::value<std::string>(&publicUrlStr)->required(), "Youtube video URL")
             ("download,D", "Download the video")
-            ("play,P", "Play audio");
+            ("play,P", "Play audio")
+            ("repeat,R", "Repeat mode");
 
         po::positional_options_description p;
         po::variables_map argsMap;
@@ -199,6 +201,7 @@ int main(int argc, char * argv[])
 
         isDownload = argsMap.count("download");
         isPlay = argsMap.count("play");
+        isRepeat = argsMap.count("repeat");
 
         if (argsMap.count("help") || (!isDownload && !isPlay))
         {
@@ -252,11 +255,9 @@ int main(int argc, char * argv[])
 
         if (isPlay)
         {
-            av_register_all();
-            SDL_Init(SDL_INIT_AUDIO);
 
-            playAudioFct = [&videoData]()
-            { Audio::playAudio(videoData); };
+            playAudioFct = [&videoData, isRepeat]()
+            { Audio::playAudio(videoData, isRepeat); };
         }
 
         if (isDownload)

@@ -40,7 +40,7 @@ typedef boost::fibers::buffered_channel<float> DataChannel;
 
 
 
-void playAudio(const std::string &);
+void playAudio(const std::string &, bool isRepeat);
 
 class CustomAvioContext
 {
@@ -77,7 +77,7 @@ class FFmpegWrapper
     bool isInit() const;
 
     void read(PacketChannel & packetChannel);
-    void bufferData(PacketChannel & packetChannel, DataChannel & dataChannel); 
+    std::vector<float> bufferData(PacketChannel & packetChannel, DataChannel & dataChannel); 
 
     private:
     bool init();

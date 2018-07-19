@@ -11,3 +11,5 @@ Options :
 -P to play audio
 
 -D to download
+
+-R for repeat mode

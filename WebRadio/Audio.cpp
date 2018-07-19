@@ -137,10 +137,12 @@ void audioCallback(void *userData, std::uint8_t * stream, int len)
 }
 
 
-void playAudio(const std::string & response)
+void playAudio(const std::string & response, bool isRepeat)
 {
 
     LOG << "start playing audio ";
+
+    av_register_all();
 
     FFmpegWrapper ffmpeg(response);
     if (!ffmpeg.isInit())
@@ -150,6 +152,7 @@ void playAudio(const std::string & response)
     }
 
     DataChannel dataChannel(SDLSampleSize / sizeof(float));
+    SDL_Init(SDL_INIT_AUDIO);
     SDL_AudioSpec inputSpec, outputSpec;
     inputSpec.freq = ffmpeg.getSampleRate();
     inputSpec.format = SDLSampleFormat;
@@ -177,13 +180,36 @@ void playAudio(const std::string & response)
     boost::fibers::fiber pushPacket(
             [&ffmpeg, &packetChannel](){ ffmpeg.read(packetChannel); }
             );
+
+    std::vector<float> songData;
     boost::fibers::fiber pullPacket(
-            [&ffmpeg, &packetChannel, &dataChannel]() { ffmpeg.bufferData(packetChannel, dataChannel);}
+            [&ffmpeg, &packetChannel, &dataChannel, &songData]() {
+            songData = ffmpeg.bufferData(packetChannel, dataChannel);
+            }
             );
 
     pushPacket.join();
     pullPacket.join();
 
+    if (isRepeat && !songData.empty())
+    {
+        // no need to redo packet decoding
+        boost::fibers::fiber replay(
+                [&dataChannel, &songData]()
+                {
+                    for (;;)
+                    {
+                        LOG << "Replay song";
+                        for (float f : songData)
+                        {
+                            dataChannel.push(f);
+                        }
+                    }
+                }); 
+        replay.join();
+    }
+
+    dataChannel.close();
     LOG << "end playing audio";
 
     SDL_CloseAudio();
@@ -360,7 +386,6 @@ void FFmpegWrapper::read(PacketChannel & packetChannel)
         if (packet->stream_index == _idxAudioStream)
         {
             packetChannel.push(packet);
-            LOG << "packet pushed";
         }
         else
         {
@@ -385,22 +410,23 @@ void FFmpegWrapper::read(PacketChannel & packetChannel)
     packetChannel.close();
 }
 
-void FFmpegWrapper::bufferData(PacketChannel & packetChannel, DataChannel & dataChannel)
+std::vector<float> FFmpegWrapper::bufferData(PacketChannel & packetChannel, DataChannel & dataChannel)
 {
     ::AVPacket * packet;         
     ::AVFrame * frame = ::av_frame_alloc();
+    std::vector<float> songData;
     if (frame == nullptr)
     {
         LOG << "could not allocate frame ";
         ::av_frame_free(&frame);
         dataChannel.close();
-        return;
+        return songData;
     }
+
+    songData.reserve(4096);
 
     while (boost::fibers::channel_op_status::success == packetChannel.pop(packet))
     {
-        LOG << "packet pulled " << packet->size;
-
         std::size_t read = 0;
         while (read < packet->size)
         {
@@ -422,6 +448,7 @@ void FFmpegWrapper::bufferData(PacketChannel & packetChannel, DataChannel & data
                     for (int chn=0; chn<getNbOfChannels(); ++chn)
                     {
                         dataChannel.push(data[chn][smp]);
+                        songData.push_back(data[chn][smp]);
                     }
                 }
             }
@@ -429,9 +456,11 @@ void FFmpegWrapper::bufferData(PacketChannel & packetChannel, DataChannel & data
         getPool().release(packet);
     }
     LOG << "end bufferData";
-    dataChannel.close();
 
     ::av_frame_free(&frame);
+
+    // RVO
+    return songData;
 }
 
 
