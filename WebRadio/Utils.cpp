@@ -47,6 +47,20 @@ void saveFile(const std::string & filePath, const std::string & fileContent, std
     ofs.close();
 }
 
+std::string readFile(const std::string & fileName)
+{
+    std::ifstream ifs(fileName, std::ios::in | std::ios::ate);
+    const std::size_t size = ifs.tellg();
+    if (size >= 0)
+    {
+        std::string content(size, '\0');
+        ifs.seekg(0, std::ios::beg);
+        ifs.read(&content[0], size);
+        return content;
+    }
+    LOG << "Failed to read file " << fileName;
+    return std::string();
+}
 
 }
 

@@ -26,7 +26,6 @@ along with WebRadio.  If not, see <https://www.gnu.org/licenses/>.
 namespace JSEngine
 {
     std::string decipherSignature(const std::string & jsCode, const std::string & signature);
-    std::string readFile(const std::string & fileName);
 }
 
 #endif

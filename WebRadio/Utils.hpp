@@ -55,6 +55,7 @@ constexpr const char * fileName(const char * file)
 
 void saveFile(const std::string & filePath, const std::string & fileContent, std::ios_base::openmode);
 
+std::string readFile(const std::string & fileName);
 
 class Logger
 {
