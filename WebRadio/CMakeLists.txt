@@ -11,6 +11,8 @@ add_executable(WebRadio WebRadio.cpp)
 
 target_sources(WebRadio
     PRIVATE
+        HtmlParser.cpp
+        HtmlParser.hpp
         Http.cpp
         Http.hpp
         Audio.cpp
