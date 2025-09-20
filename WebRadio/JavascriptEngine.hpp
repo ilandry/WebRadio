@@ -22,10 +22,9 @@ along with WebRadio.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <string>
 
-
-namespace JSEngine
-{
-    std::string decipherSignature(const std::string & jsCode, const std::string & signature);
+namespace JSEngine {
+std::string decipherSignature(const std::string& jsCode,
+                              const std::string& signature);
 }
 
 #endif

@@ -17,143 +17,124 @@ You should have received a copy of the GNU Affero General Public License
 along with WebRadio.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "Utils.hpp"
-#include "Http.hpp"
-#include "Audio.hpp"
-#include "HtmlParser.hpp"
-
 #include <boost/program_options.hpp>
-
-#include <iostream>
-#include <string>
+#include <cstdlib>
 #include <fstream>
 #include <functional>
-#include <thread>
 #include <future>
+#include <iostream>
+#include <string>
+#include <thread>
 #include <typeinfo>
-#include <cstdlib>
 
+#include "Audio.hpp"
+#include "HtmlParser.hpp"
+#include "Http.hpp"
+#include "Utils.hpp"
 
+int main(int argc, char* argv[]) {
+  namespace po = boost::program_options;
 
-int main(int argc, char * argv[])
-{
-    namespace po = boost::program_options;
+  bool isDownload = false;
+  bool isPlay = false;
+  bool isRepeat = false;
 
-    bool isDownload = false;
-    bool isPlay = false;
-    bool isRepeat = false;
+  std::string publicUrlStr;
+  try {
+    po::options_description desc("Arguments");
+    desc.add_options()("help", "list command arguments")(
+        "url", po::value<std::string>(&publicUrlStr)->required(),
+        "Youtube video URL")("download,D", "Download the video")(
+        "play,P", "Play audio")("repeat,R", "Repeat mode");
 
-    std::string publicUrlStr;
-    try
-    {
+    po::positional_options_description p;
+    po::variables_map argsMap;
+    po::store(
+        po::command_line_parser(argc, argv).options(desc).positional(p).run(),
+        argsMap);
 
-        po::options_description desc("Arguments");
-        desc.add_options()
-            ("help", "list command arguments")
-            ("url", po::value<std::string>(&publicUrlStr)->required(), "Youtube video URL")
-            ("download,D", "Download the video")
-            ("play,P", "Play audio")
-            ("repeat,R", "Repeat mode");
+    isDownload = argsMap.count("download");
+    isPlay = argsMap.count("play");
+    isRepeat = argsMap.count("repeat");
 
-        po::positional_options_description p;
-        po::variables_map argsMap;
-        po::store(po::command_line_parser(argc, argv).
-                options(desc).positional(p).run(), argsMap);
-
-        isDownload = argsMap.count("download");
-        isPlay = argsMap.count("play");
-        isRepeat = argsMap.count("repeat");
-
-        if (argsMap.count("help") || (!isDownload && !isPlay))
-        {
-            std::cout << "Usage: options_description [options] " << std::endl;
-            std::cout << desc;
-            return EXIT_SUCCESS;
-        }
-
-        po::notify(argsMap);
-    }
-    catch (const std::exception ex)
-    {
-        std::cerr << ex.what() << std::endl;
-        return EXIT_FAILURE;
+    if (argsMap.count("help") || (!isDownload && !isPlay)) {
+      std::cout << "Usage: options_description [options] " << std::endl;
+      std::cout << desc;
+      return EXIT_SUCCESS;
     }
 
-    boost::asio::io_context ioService(1); // run in a single thread
-    boost::asio::ssl::context ctx(boost::asio::ssl::context::sslv23_client);
-    ctx.set_default_verify_paths();
+    po::notify(argsMap);
+  } catch (const std::exception ex) {
+    std::cerr << ex.what() << std::endl;
+    return EXIT_FAILURE;
+  }
 
-    Http::Client clientHtml(ioService, ctx);
-    Http::Client clientJs(ioService, ctx);
-    Http::Client clientVideo(ioService, ctx);
+  boost::asio::io_context ioService(1);  // run in a single thread
+  boost::asio::ssl::context ctx(boost::asio::ssl::context::sslv23_client);
+  ctx.set_default_verify_paths();
 
-    Http::Url youtubeUrl(publicUrlStr);
+  Http::Client clientHtml(ioService, ctx);
+  Http::Client clientJs(ioService, ctx);
+  Http::Client clientVideo(ioService, ctx);
 
-    // //testing VEVO 
-    //std::future<std::string> htmlFuture = clientHtml.get("www.youtube.com" , "443", 
-    //        "/watch?has_verified=1&bpctr=9999999999&hl=en&disable_polymer=true&gl=US&v=f68VJQc7qys");
-    
-    std::future<std::string> htmlFuture = clientHtml.get(youtubeUrl._host, "443", youtubeUrl._target);        
-    
-    std::thread ioThread([&ioService]() {ioService.run();});
+  Http::Url youtubeUrl(publicUrlStr);
 
-    std::function<void(void)> playAudioFct;
-    std::function<void(void)> saveFileFct;
+  // //testing VEVO
+  // std::future<std::string> htmlFuture = clientHtml.get("www.youtube.com" ,
+  // "443",
+  //        "/watch?has_verified=1&bpctr=9999999999&hl=en&disable_polymer=true&gl=US&v=f68VJQc7qys");
 
-    const std::string & html = htmlFuture.get();
+  std::future<std::string> htmlFuture =
+      clientHtml.get(youtubeUrl._host, "443", youtubeUrl._target);
 
-    const std::string & cookies = clientHtml.getResponseCookies();
-    clientJs.setRequestCookies(cookies);
+  std::thread ioThread([&ioService]() { ioService.run(); });
 
-    Http::Url videoUrl = HtmlParser::extractVideoUrl(clientJs, html);
-    std::string videoData;
+  std::function<void(void)> playAudioFct;
+  std::function<void(void)> saveFileFct;
 
-    if (!videoUrl.empty())
-    {
-        std::future<std::string> videoFuture = clientVideo.get(videoUrl._host, "443", videoUrl._target); 
+  const std::string& html = htmlFuture.get();
 
-        videoData = videoFuture.get();
+  const std::string& cookies = clientHtml.getResponseCookies();
+  clientJs.setRequestCookies(cookies);
 
-        if (isPlay)
-        {
+  Http::Url videoUrl = HtmlParser::extractVideoUrl(clientJs, html);
+  std::string videoData;
 
-            playAudioFct = [&videoData, isRepeat]()
-            { Audio::playAudio(videoData, isRepeat); };
-        }
+  if (!videoUrl.empty()) {
+    std::future<std::string> videoFuture =
+        clientVideo.get(videoUrl._host, "443", videoUrl._target);
 
-        if (isDownload)
-        {
-            saveFileFct = [&videoData, &publicUrlStr]()
-            { 
-                Utils::saveFile("videoData"/*publicUrlStr*/,videoData, 
-                    std::ofstream::binary | 
-                    std::ofstream::out | 
-                    std::ofstream::trunc);
-            };
-        } 
-    } 
+    videoData = videoFuture.get();
 
-    if (playAudioFct && saveFileFct)
-    {
-        std::thread audioThread(playAudioFct);
-        std::thread saveThread(saveFileFct);
-        audioThread.join();
-        saveThread.join();
-    }
-    else if (saveFileFct)
-    {
-        std::thread saveThread(saveFileFct);
-        saveThread.join();
-    }
-    else if (playAudioFct)
-    {
-        std::thread audioThread(playAudioFct);
-        audioThread.join();
+    if (isPlay) {
+      playAudioFct = [&videoData, isRepeat]() {
+        Audio::playAudio(videoData, isRepeat);
+      };
     }
 
+    if (isDownload) {
+      saveFileFct = [&videoData, &publicUrlStr]() {
+        Utils::saveFile(
+            "videoData" /*publicUrlStr*/, videoData,
+            std::ofstream::binary | std::ofstream::out | std::ofstream::trunc);
+      };
+    }
+  }
 
-    ioThread.join();
+  if (playAudioFct && saveFileFct) {
+    std::thread audioThread(playAudioFct);
+    std::thread saveThread(saveFileFct);
+    audioThread.join();
+    saveThread.join();
+  } else if (saveFileFct) {
+    std::thread saveThread(saveFileFct);
+    saveThread.join();
+  } else if (playAudioFct) {
+    std::thread audioThread(playAudioFct);
+    audioThread.join();
+  }
 
+  ioThread.join();
 
-    return EXIT_SUCCESS;
+  return EXIT_SUCCESS;
 }

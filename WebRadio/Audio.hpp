@@ -22,79 +22,70 @@ along with WebRadio.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <boost/fiber/all.hpp>
 
-extern "C"
-{
+extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
-#include <libswscale/swscale.h>
-#include <libswresample/swresample.h>
 #include <libavutil/opt.h>
+#include <libswresample/swresample.h>
+#include <libswscale/swscale.h>
 }
 
 #include <SDL2/SDL.h>
 
-namespace Audio
-{
-typedef boost::fibers::buffered_channel<::AVPacket*> PacketChannel;
+namespace Audio {
+typedef boost::fibers::buffered_channel<::AVPacket *> PacketChannel;
 typedef boost::fibers::buffered_channel<float> DataChannel;
-
-
 
 void playAudio(const std::string &, bool isRepeat);
 
-class CustomAvioContext
-{
-    public:
-    CustomAvioContext(std::string);
-    ~CustomAvioContext();
-    CustomAvioContext(const CustomAvioContext &) = delete;
-    CustomAvioContext(CustomAvioContext &&) = delete;
+class CustomAvioContext {
+ public:
+  CustomAvioContext(std::string);
+  ~CustomAvioContext();
+  CustomAvioContext(const CustomAvioContext &) = delete;
+  CustomAvioContext(CustomAvioContext &&) = delete;
 
-    ::AVIOContext * getContext();
+  ::AVIOContext *getContext();
 
-    static int read(void * userData, uint8_t * buffer, int bufferSize);
+  static int read(void *userData, uint8_t *buffer, int bufferSize);
 
-    static int64_t seek(void * userData, int64_t offset, int whence);
+  static int64_t seek(void *userData, int64_t offset, int whence);
 
-    private:
-    std::string _data;
-    std::size_t _pos;
-    uint8_t * _buffer;
-    ::AVIOContext * _context;
+ private:
+  std::string _data;
+  std::size_t _pos;
+  uint8_t *_buffer;
+  ::AVIOContext *_context;
 };
 
-class FFmpegWrapper
-{
-    //this legacy C API must be quarantained :) 
-    public:
-    FFmpegWrapper(const std::string &);
-    ~FFmpegWrapper();
-    FFmpegWrapper(const FFmpegWrapper &) = delete;
-    FFmpegWrapper(FFmpegWrapper &&) = delete;
+class FFmpegWrapper {
+  // this legacy C API must be quarantained :)
+ public:
+  FFmpegWrapper(const std::string &);
+  ~FFmpegWrapper();
+  FFmpegWrapper(const FFmpegWrapper &) = delete;
+  FFmpegWrapper(FFmpegWrapper &&) = delete;
 
-    int getSampleRate() const;
-    int getNbOfChannels() const;
-    bool isInit() const;
+  int getSampleRate() const;
+  int getNbOfChannels() const;
+  bool isInit() const;
 
-    void read(PacketChannel & packetChannel);
-    std::vector<float> bufferData(PacketChannel & packetChannel, DataChannel & dataChannel); 
+  void read(PacketChannel &packetChannel);
+  std::vector<float> bufferData(PacketChannel &packetChannel,
+                                DataChannel &dataChannel);
 
-    private:
-    bool init();
+ private:
+  bool init();
 
-    CustomAvioContext _customCtx;
-    ::AVFormatContext * _formatCtx;
-    ::AVStream * _audioStream;
-    ::AVCodec * _codec;
-    ::AVCodecContext * _codecCtx;
-    int _idxAudioStream;
-    bool _isInit;
-
+  CustomAvioContext _customCtx;
+  ::AVFormatContext *_formatCtx;
+  ::AVStream *_audioStream;
+  ::AVCodec *_codec;
+  ::AVCodecContext *_codecCtx;
+  int _idxAudioStream;
+  bool _isInit;
 };
 
-
-
-}
-
+}  // namespace Audio
 
 #endif

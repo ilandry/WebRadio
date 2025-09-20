@@ -20,22 +20,16 @@ along with WebRadio.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef HTML_PARSER_HPP_
 #define HTML_PARSER_HPP_
 
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
+
 #include "Http.hpp"
 
-namespace HtmlParser
-{
+namespace HtmlParser {
 
-std::unordered_map<std::string, std::string> parse(const std::string & html);
-Http::Url extractVideoUrl(Http::Client &, const std::string & response);
+std::unordered_map<std::string, std::string> parse(const std::string &html);
+Http::Url extractVideoUrl(Http::Client &, const std::string &response);
 
-
-}
+}  // namespace HtmlParser
 
 #endif /* HTML_PARSER_HPP_ */
-
-
-
-
-

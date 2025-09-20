@@ -17,68 +17,54 @@ You should have received a copy of the GNU Affero General Public License
 along with WebRadio.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
-
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
-#include <fstream>
 #include <boost/utility/string_view.hpp>
+#include <fstream>
 
 #define LOG Utils::Logger::getLogger(Utils::fileName(__FILE__), __LINE__)
 
-
-namespace Utils
-{
-constexpr const char * endChars(const char * chars)
-{
-    return *chars == '\0' ? chars : endChars(++chars);
+namespace Utils {
+constexpr const char* endChars(const char* chars) {
+  return *chars == '\0' ? chars : endChars(++chars);
 }
 
-constexpr const char * rfindSlash(const char * chars)
-{
-    return *chars == '/' ? ++chars : rfindSlash(--chars);
+constexpr const char* rfindSlash(const char* chars) {
+  return *chars == '/' ? ++chars : rfindSlash(--chars);
 }
 
-constexpr bool hasSlash(const char * chars)
-{
-    return *chars == '/' ? 
-        true : 
-        (*chars == '\0' ? false : hasSlash(++chars));
+constexpr bool hasSlash(const char* chars) {
+  return *chars == '/' ? true : (*chars == '\0' ? false : hasSlash(++chars));
 }
 
-constexpr const char * fileName(const char * file)
-{
-    return hasSlash(file) ? 
-        rfindSlash(endChars(file)) : file;
+constexpr const char* fileName(const char* file) {
+  return hasSlash(file) ? rfindSlash(endChars(file)) : file;
 }
 
-void saveFile(const std::string & filePath, const std::string & fileContent, std::ios_base::openmode);
+void saveFile(const std::string& filePath, const std::string& fileContent,
+              std::ios_base::openmode);
 
-std::string readFile(const std::string & fileName);
+std::string readFile(const std::string& fileName);
 
-class Logger
-{
-    std::ofstream _ofs;
+class Logger {
+  std::ofstream _ofs;
 
-    public:
-    Logger();
+ public:
+  Logger();
 
+  static Logger& getLogger(boost::string_view fileName, int line);
 
-    static Logger& getLogger(boost::string_view fileName, int line);
-
-    // no concurrent logging needed at the moment
-    template<typename T>
-    Logger& operator<<(const T& t)
-    {
-        _ofs << t; 
-        // for debug
-        //_ofs.flush();
-        return *this;
-    }
+  // no concurrent logging needed at the moment
+  template <typename T>
+  Logger& operator<<(const T& t) {
+    _ofs << t;
+    // for debug
+    //_ofs.flush();
+    return *this;
+  }
 };
 
-}
-
+}  // namespace Utils
 
 #endif /* UTILS_HPP */
